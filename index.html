@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>盲五子棋 - 玩家 vs 電腦</title>
+  <style>
+    canvas { background: #f2d9b1; display: block; margin: 20px auto; }
+    body { text-align: center; font-family: sans-serif; }
+    h1 { margin-bottom: 0; }
+    #status { font-size: 1.2em; margin-top: 10px; }
+    button { padding: 10px 20px; font-size: 1em; margin: 10px 5px; }
+  </style>
+  <!-- 引入 SweetAlert2 -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+  <h1>Blind Gomoku - 玩家 vs 電腦</h1>
+  <canvas id="board" width="600" height="600"></canvas>
+  <div>
+    <button onclick="revealPieces()">🔎 揭示誰下的棋</button>
+    <button onclick="restartGame()">🔄 重新開始</button>
+  </div>
+  <p id="status"></p>
+
+  <script>
+    const canvas = document.getElementById('board');
+    const ctx = canvas.getContext('2d');
+    const size = 15;
+    const gridSize = canvas.width / size;
+    const board = Array.from({ length: size }, () => Array(size).fill(0));
+    let gameOver = false;
+    let revealMode = false;
+
+    drawBoard();
+
+    canvas.addEventListener('click', (e) => {
+      if (gameOver) return;
+      const x = Math.floor(e.offsetX / gridSize);
+      const y = Math.floor(e.offsetY / gridSize);
+      if (board[y][x] !== 0) return;
+
+      placePiece(x, y, 1);
+      if (checkWin(x, y, 1)) {
+        gameOver = true;
+        document.getElementById("status").textContent = "🎉 玩家獲勝！（你猜對了嗎？）";
+        showWinAlert("🎉 玩家獲勝！（你猜對了嗎？）");
+        return;
+      }
+
+      setTimeout(computerMove, 300);
+    });
+
+    function drawBoard() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "#555";
+      for (let i = 0; i < size; i++) {
+        ctx.beginPath();
+        ctx.moveTo(gridSize / 2, gridSize / 2 + i * gridSize);
+        ctx.lineTo(canvas.width - gridSize / 2, gridSize / 2 + i * gridSize);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(gridSize / 2 + i * gridSize, gridSize / 2);
+        ctx.lineTo(gridSize / 2 + i * gridSize, canvas.height - gridSize / 2);
+        ctx.stroke();
+      }
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          if (board[y][x] !== 0) {
+            drawPiece(x, y, board[y][x]);
+          }
+        }
+      }
+    }
+
+    function placePiece(x, y, player) {
+      board[y][x] = player;
+      drawPiece(x, y, player);
+    }
+
+    function drawPiece(x, y, player) {
+      ctx.beginPath();
+      ctx.arc(x * gridSize + gridSize / 2, y * gridSize + gridSize / 2, gridSize / 3, 0, Math.PI * 2);
+      ctx.fillStyle = "#444"; // 所有棋子外觀一致
+      ctx.fill();
+      ctx.stroke();
+
+      if (revealMode) {
+        ctx.fillStyle = player === 1 ? "white" : "black";
+        ctx.font = "16px sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(player === 1 ? "●" : "○", x * gridSize + gridSize / 2, y * gridSize + gridSize / 2);
+      }
+    }
+
+    function checkWin(x, y, player) {
+      const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+      for (const [dx, dy] of dirs) {
+        let count = 1;
+        for (let d = 1; d < 5; d++) {
+          const nx = x + dx * d, ny = y + dy * d;
+          if (board[ny]?.[nx] === player) count++;
+          else break;
+        }
+        for (let d = 1; d < 5; d++) {
+          const nx = x - dx * d, ny = y - dy * d;
+          if (board[ny]?.[nx] === player) count++;
+          else break;
+        }
+        if (count >= 5) return true;
+      }
+      return false;
+    }
+
+    function computerMove() {
+      if (gameOver) return;
+
+      let bestScore = -Infinity;
+      let move = null;
+
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          if (board[y][x] !== 0) continue;
+
+          board[y][x] = 2;
+          let score = evaluate(x, y, 2);
+          board[y][x] = 0;
+
+          board[y][x] = 1;
+          score += evaluate(x, y, 1) * 0.8;
+          board[y][x] = 0;
+
+          if (score > bestScore) {
+            bestScore = score;
+            move = [x, y];
+          }
+        }
+      }
+
+      if (move) {
+        const [x, y] = move;
+        placePiece(x, y, 2);
+        if (checkWin(x, y, 2)) {
+          gameOver = true;
+          document.getElementById("status").textContent = "💻 電腦獲勝！（你猜錯了嗎？）";
+          showWinAlert("💻 電腦獲勝！（你猜錯了嗎？）");
+        }
+      }
+    }
+
+    function evaluate(x, y, player) {
+      const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+      let score = 0;
+
+      for (const [dx, dy] of dirs) {
+        let count = 1;
+        let block = 0;
+
+        for (let d = 1; d < 5; d++) {
+          const nx = x + dx * d, ny = y + dy * d;
+          if (board[ny]?.[nx] === player) count++;
+          else {
+            if (board[ny]?.[nx] !== 0) block++;
+            break;
+          }
+        }
+        for (let d = 1; d < 5; d++) {
+          const nx = x - dx * d, ny = y - dy * d;
+          if (board[ny]?.[nx] === player) count++;
+          else {
+            if (board[ny]?.[nx] !== 0) block++;
+            break;
+          }
+        }
+
+        if (count >= 5) score += 100000;
+        else if (count === 4 && block === 0) score += 10000;
+        else if (count === 4 && block === 1) score += 1000;
+        else if (count === 3 && block === 0) score += 500;
+        else if (count === 3 && block === 1) score += 100;
+        else if (count === 2 && block === 0) score += 50;
+      }
+
+      return score;
+    }
+
+    function revealPieces() {
+      revealMode = !revealMode;
+      drawBoard();
+      const btn = document.querySelectorAll("button")[0];
+      btn.textContent = revealMode ? "🙈 隱藏棋子陣營" : "🔎 揭示誰下的棋";
+    }
+
+    function restartGame() {
+      for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+          board[y][x] = 0;
+        }
+      }
+      gameOver = false;
+      revealMode = false;
+      document.getElementById("status").textContent = "";
+      drawBoard();
+    }
+
+    function showWinAlert(message) {
+      Swal.fire({
+        title: message,
+        icon: "success",
+        confirmButtonText: "🔄 再玩一次",
+        allowOutsideClick: false
+      }).then(() => {
+        restartGame();
+      });
+    }
+  </script>
+</body>
+</html>
