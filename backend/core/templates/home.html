@@ -2,21 +2,85 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>盲五子棋 - 玩家 vs 電腦</title>
-  <style>
-    canvas { background: #f2d9b1; display: block; margin: 20px auto; }
-    body { text-align: center; font-family: sans-serif; }
-    h1 { margin-bottom: 0; }
-    #status { font-size: 1.2em; margin-top: 10px; }
-    button { padding: 10px 20px; font-size: 1em; margin: 10px 5px; }
-  </style>
-  <!-- 引入 SweetAlert2 -->
+
+  <!-- Google Analytics (可選) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-YGLG3HDKD7"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-YGLG3HDKD7');
+  </script>
+
+  <!-- SweetAlert2 -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Segoe UI", sans-serif;
+      background: linear-gradient(to bottom right, #f8e0c7, #f2d9b1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h1 {
+      margin-top: 1.5rem;
+      font-size: 2rem;
+      color: #444;
+      text-align: center;
+    }
+
+    canvas {
+      background: #fdf6e3;
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      margin: 1rem auto;
+      max-width: 95vw;
+      height: auto;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 10px;
+      background-color: #444;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    button:hover {
+      background-color: #222;
+    }
+
+    #status {
+      font-size: 1.2em;
+      margin: 0.5rem;
+      color: #333;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
   <h1>盲五子棋 - 玩家 vs 電腦</h1>
   <canvas id="board" width="600" height="600"></canvas>
-  <div>
+  <div class="controls">
     <button onclick="revealPieces()">🔎 揭示誰下的棋</button>
     <button onclick="restartGame()">🔄 重新開始</button>
   </div>
@@ -26,17 +90,31 @@
     const canvas = document.getElementById('board');
     const ctx = canvas.getContext('2d');
     const size = 15;
-    const gridSize = canvas.width / size;
+    let gridSize = canvas.width / size;
     const board = Array.from({ length: size }, () => Array(size).fill(0));
     let gameOver = false;
     let revealMode = false;
 
     drawBoard();
 
+    window.addEventListener('resize', () => {
+      resizeCanvas();
+    });
+
+    function resizeCanvas() {
+      const width = Math.min(window.innerWidth * 0.95, 600);
+      canvas.width = canvas.height = width;
+      gridSize = canvas.width / size;
+      drawBoard();
+    }
+
+    resizeCanvas();
+
     canvas.addEventListener('click', (e) => {
       if (gameOver) return;
-      const x = Math.floor(e.offsetX / gridSize);
-      const y = Math.floor(e.offsetY / gridSize);
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) / gridSize);
+      const y = Math.floor((e.clientY - rect.top) / gridSize);
       if (board[y][x] !== 0) return;
 
       placePiece(x, y, 1);
@@ -82,13 +160,13 @@
     function drawPiece(x, y, player) {
       ctx.beginPath();
       ctx.arc(x * gridSize + gridSize / 2, y * gridSize + gridSize / 2, gridSize / 3, 0, Math.PI * 2);
-      ctx.fillStyle = "#444"; // 所有棋子外觀一致
+      ctx.fillStyle = "#444";
       ctx.fill();
       ctx.stroke();
 
       if (revealMode) {
         ctx.fillStyle = player === 1 ? "white" : "black";
-        ctx.font = "16px sans-serif";
+        ctx.font = `${Math.floor(gridSize / 2.5)}px sans-serif`;
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(player === 1 ? "●" : "○", x * gridSize + gridSize / 2, y * gridSize + gridSize / 2);
