@@ -81,7 +81,7 @@
   <h1>盲五子棋 - 玩家 vs 電腦</h1>
   <canvas id="board" width="600" height="600"></canvas>
   <div class="controls">
-    <button onclick="revealPieces()">🔎 揭示誰下的棋</button>
+    <button id="revealBtn" onclick="revealPieces()">🔎 揭示誰下的棋</button>
     <button onclick="restartGame()">🔄 重新開始</button>
   </div>
   <p id="status"></p>
@@ -267,7 +267,7 @@
     function revealPieces() {
       revealMode = !revealMode;
       drawBoard();
-      const btn = document.querySelectorAll("button")[0];
+      const btn = document.getElementById("revealBtn");
       btn.textContent = revealMode ? "🙈 隱藏棋子陣營" : "🔎 揭示誰下的棋";
     }
 
@@ -280,6 +280,8 @@
       gameOver = false;
       revealMode = false;
       document.getElementById("status").textContent = "";
+      const btn = document.getElementById("revealBtn");
+      btn.textContent = "🔎 揭示誰下的棋";
       drawBoard();
     }
 
